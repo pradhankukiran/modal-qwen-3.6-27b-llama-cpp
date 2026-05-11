@@ -1,4 +1,29 @@
+# Local secrets and environment
+.env
+.env.*
+!.env.example
+.modal.toml
+
+# Python
 __pycache__/
 *.py[cod]
-.env
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
 .venv/
+venv/
+
+# Build and runtime output
+build/
+dist/
+*.egg-info/
+*.log
+logs/
+
+# Editor and OS noise
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~

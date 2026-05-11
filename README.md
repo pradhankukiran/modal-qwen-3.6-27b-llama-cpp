@@ -1,99 +1,138 @@
 # Qwen3.6 27B MTP on Modal with llama.cpp
 
-This deploys a full-quality `Qwen3.6-27B-F16-mtp.gguf` model on a Modal H100 as an OpenAI-compatible API.
+Full-quality `Qwen3.6-27B-F16-mtp.gguf` served on Modal H100 through `llama.cpp` with an OpenAI-compatible API.
 
-## What It Runs
+## Service
 
 - Modal app: `qwen36-27b-llama`
-- Model repo: `froggeric/Qwen3.6-27B-MTP-GGUF`
-- Model file: `Qwen3.6-27B-F16-mtp.gguf`
-- Server: `llama-server`
-- Public server: FastAPI proxy in front of `llama-server`
-- Warmup route: `/warmup`
-- API route: `/v1/chat/completions`
-- GPU: `H100`
-- Context window: 262,144 tokens
-- Autoscaling: scale to zero, max one container, keep warm for 5 minutes
-- MTP serving: single parallel sequence, because this llama.cpp MTP path requires `n_parallel=1`
-- Thinking mode: off by default at the proxy, so normal calls return `message.content`
+- Production URL: `https://pradhankukiran--qwen36-27b-llama-serve.modal.run`
+- Model: `froggeric/Qwen3.6-27B-MTP-GGUF/Qwen3.6-27B-F16-mtp.gguf`
+- Runtime: `llama-server` behind a FastAPI proxy
+- GPU: H100 80GB
+- Context window: 262,144 tokens per request
+- Scale policy: `min_containers=0`, `max_containers=1`, `scaledown_window=300`
+- MTP: enabled with `--spec-type mtp --spec-draft-n-max 3`
+- Thinking mode: off by default in the proxy
 
-## 1. Download The Model Into A Modal Volume
+The warmup endpoint keeps the container/model loaded for the configured scale-down window. It does not create a persistent chat session; callers should send the needed conversation history on each request.
 
-This downloads the 54 GB model once into the `qwen36-27b-models` Modal Volume.
+## Endpoints
 
-```bash
-cd /home/kiran/modal-qwen-3.6-27b-llama-cpp
-modal run qwen36_llama_modal.py
-```
+### `GET /health`
 
-## 2. Deploy The API
-
-For a private API, set an API key for `llama-server`:
+Proxy health check. This does not prove the model is loaded.
 
 ```bash
-export LLAMA_API_KEY='replace-with-a-long-random-token'
-modal deploy qwen36_llama_modal.py
+curl -L "https://pradhankukiran--qwen36-27b-llama-serve.modal.run/health"
 ```
 
-Modal will print a URL like:
+### `GET|POST /warmup`
+
+Starts the Modal container if needed, waits for `llama-server`, and runs a one-token inference.
+
+```bash
+curl -L -sS "https://pradhankukiran--qwen36-27b-llama-serve.modal.run/warmup" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+Expected response:
+
+```json
+{"status":"warm","model":"qwen3.6-27b"}
+```
+
+### `POST /v1/chat/completions`
+
+OpenAI-compatible chat completions endpoint.
+
+```bash
+curl -L -sS "https://pradhankukiran--qwen36-27b-llama-serve.modal.run/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  --data '{
+    "model": "qwen3.6-27b",
+    "messages": [
+      {"role": "user", "content": "Reply with exactly: API works"}
+    ],
+    "max_tokens": 64,
+    "temperature": 0
+  }'
+```
+
+## Auth
+
+Set `LLAMA_API_KEY` before deploying. Clients pass the same value as:
 
 ```text
-https://YOUR-WORKSPACE--qwen36-27b-llama-serve.modal.run
+Authorization: Bearer YOUR_API_KEY
 ```
 
-Use that as your `OPENAI_BASE_URL`.
+or:
 
-## 3. Warm A Session
-
-```bash
-export OPENAI_BASE_URL='https://YOUR-WORKSPACE--qwen36-27b-llama-serve.modal.run'
-export OPENAI_API_KEY='replace-with-a-long-random-token'
-./warmup.sh
+```text
+X-API-Key: YOUR_API_KEY
 ```
 
-The `/warmup` endpoint runs in the same Modal container pool as the OpenAI-compatible `/v1/*` API. It waits for `llama-server` to become ready, then performs a tiny one-token inference so the next real API call should avoid the boot/model-load path.
+If `LLAMA_API_KEY` is not set at deploy time, the API is public.
 
-The first warmup call can take a while because Modal starts the H100 container and `llama-server` loads the model. Calls after that should be warm until `APP_SCALEDOWN_WINDOW_SECONDS` passes with no traffic.
-
-## 4. Call From Your App
+## OpenAI SDK
 
 ```python
 from openai import OpenAI
 
 client = OpenAI(
-    base_url="https://YOUR-WORKSPACE--qwen36-27b-llama-serve.modal.run/v1",
-    api_key="replace-with-a-long-random-token",
+    base_url="https://pradhankukiran--qwen36-27b-llama-serve.modal.run/v1",
+    api_key="YOUR_API_KEY",
 )
 
-resp = client.chat.completions.create(
+response = client.chat.completions.create(
     model="qwen3.6-27b",
     messages=[{"role": "user", "content": "Hello"}],
+    max_tokens=256,
+    temperature=0.2,
 )
 
-print(resp.choices[0].message.content)
+print(response.choices[0].message.content)
 ```
 
-Or test with the included client:
+## Request Params
 
-```bash
-python3 -m pip install --user --break-system-packages openai
-python3 client.py
+Common supported params:
+
+```json
+{
+  "model": "qwen3.6-27b",
+  "messages": [],
+  "max_tokens": 512,
+  "temperature": 0.2,
+  "top_p": 0.9,
+  "top_k": 40,
+  "min_p": 0.05,
+  "stream": false,
+  "stop": ["..."],
+  "seed": 123,
+  "response_format": {"type": "json_object"},
+  "chat_template_kwargs": {
+    "enable_thinking": false
+  }
+}
 ```
 
-Direct `curl` example:
+`response_format` can be used for JSON mode or JSON-schema constrained output if supported by the current `llama.cpp` build.
 
-```bash
-curl "${OPENAI_BASE_URL%/}/v1/chat/completions" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer ${OPENAI_API_KEY}" \
-  --data '{
-    "model": "qwen3.6-27b",
-    "messages": [{"role": "user", "content": "Hello"}],
-    "max_tokens": 128
-  }'
+## Thinking Mode
+
+The proxy injects this by default when the caller does not provide `chat_template_kwargs`:
+
+```json
+{
+  "chat_template_kwargs": {
+    "enable_thinking": false
+  }
+}
 ```
 
-To explicitly enable Qwen3.6 thinking output for a request, include:
+To enable Qwen thinking/reasoning for one request:
 
 ```json
 {
@@ -103,24 +142,84 @@ To explicitly enable Qwen3.6 thinking output for a request, include:
 }
 ```
 
-## Useful Knobs
+When thinking is enabled, reasoning tokens consume the same output budget as normal generated tokens. Some responses may include `message.reasoning_content` in addition to or before `message.content`.
 
-Set these before `modal deploy` if needed:
+## Token Limits
+
+The deployed context window is:
+
+```text
+262,144 total tokens per request
+```
+
+This is input plus output plus reasoning tokens:
+
+```text
+messages + generated output + thinking tokens <= 262,144
+```
+
+Examples:
+
+- `200K` input tokens + `20K` output tokens fits.
+- `250K` input tokens leaves roughly `12K` tokens for output and reasoning.
+- Thinking mode can use a large portion of `max_tokens`, so allocate more output budget when `enable_thinking=true`.
+
+## Deploy
+
+First authenticate Modal:
 
 ```bash
+modal setup
+```
+
+Set deploy-time env vars:
+
+```bash
+export LLAMA_API_KEY='replace-with-a-long-random-token'
+export HF_TOKEN='optional-huggingface-token'
 export APP_CTX_SIZE=262144
 export APP_SPEC_DRAFT_N_MAX=3
 export APP_SCALEDOWN_WINDOW_SECONDS=300
 ```
 
-The model's native context is 262,144 tokens, and this deployment is configured to use that full window. If H100 memory pressure or startup time becomes a problem, lower `APP_CTX_SIZE` to `65536`, `32768`, or `16384`.
+Download/cache the model once into a Modal Volume:
 
-## Cost Controls
+```bash
+modal run qwen36_llama_modal.py
+```
 
-This config intentionally uses:
+Deploy:
 
-- `min_containers=0`: no always-on GPU
-- `max_containers=1`: no surprise horizontal scaling
-- `scaledown_window=300`: keeps the model warm for a short session
+```bash
+modal deploy qwen36_llama_modal.py
+```
 
-Do not send warmup requests continuously unless you want the H100 to stay running.
+## Local Helpers
+
+Create a local `.env` file, which is intentionally ignored by git:
+
+```bash
+LLAMA_API_KEY=replace-with-a-long-random-token
+OPENAI_API_KEY=replace-with-a-long-random-token
+OPENAI_BASE_URL=https://pradhankukiran--qwen36-27b-llama-serve.modal.run
+OPENAI_MODEL=qwen3.6-27b
+APP_CTX_SIZE=262144
+APP_SPEC_DRAFT_N_MAX=3
+APP_SCALEDOWN_WINDOW_SECONDS=300
+```
+
+Then:
+
+```bash
+set -a; . ./.env; set +a
+./warmup.sh
+python3 client.py
+```
+
+## Cost Notes
+
+- Deploying does not start H100 compute by itself.
+- `/warmup` and `/v1/chat/completions` can start H100 compute.
+- The H100 stays warm until `scaledown_window` expires with no traffic.
+- Do not send continuous warmup requests unless you want the GPU kept alive.
+- Full 262K context can increase memory pressure and startup/runtime cost. Lower `APP_CTX_SIZE` if needed.
