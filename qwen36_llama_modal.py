@@ -14,6 +14,7 @@ MODEL_DIR = Path("/models")
 MODEL_PATH = MODEL_DIR / MODEL_FILE
 PUBLIC_PORT = 8000
 LLAMA_PORT = 8001
+EPHEMERAL_DISK_MB = 524288
 
 CTX_SIZE = os.environ.get("APP_CTX_SIZE", "8192")
 SPEC_DRAFT_N_MAX = os.environ.get("APP_SPEC_DRAFT_N_MAX", "3")
@@ -90,7 +91,7 @@ def _download_model_if_missing() -> str:
     env=remote_env,
     volumes={"/models": model_volume},
     timeout=60 * 60,
-    ephemeral_disk=90 * 1024,
+    ephemeral_disk=EPHEMERAL_DISK_MB,
 )
 def download_model():
     path = _download_model_if_missing()
@@ -107,7 +108,7 @@ def download_model():
     scaledown_window=int(os.environ.get("APP_SCALEDOWN_WINDOW_SECONDS", "300")),
     timeout=60 * 60,
     startup_timeout=60 * 30,
-    ephemeral_disk=90 * 1024,
+    ephemeral_disk=EPHEMERAL_DISK_MB,
     include_source=True,
 )
 @modal.concurrent(max_inputs=10)
