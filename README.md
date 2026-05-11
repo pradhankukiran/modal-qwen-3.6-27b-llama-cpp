@@ -5,7 +5,7 @@ Full-quality `Qwen3.6-27B-F16-mtp.gguf` served on Modal H100 through `llama.cpp`
 ## Service
 
 - Modal app: `qwen36-27b-llama`
-- Production URL: `https://pradhankukiran--qwen36-27b-llama-serve.modal.run`
+- Production URL: `https://YOUR-WORKSPACE--qwen36-27b-llama-serve.modal.run`
 - Model: `froggeric/Qwen3.6-27B-MTP-GGUF/Qwen3.6-27B-F16-mtp.gguf`
 - Runtime: `llama-server` behind a FastAPI proxy
 - GPU: H100 80GB
@@ -23,7 +23,7 @@ The warmup endpoint keeps the container/model loaded for the configured scale-do
 Proxy health check. This does not prove the model is loaded.
 
 ```bash
-curl -L "https://pradhankukiran--qwen36-27b-llama-serve.modal.run/health"
+curl -L "https://YOUR-WORKSPACE--qwen36-27b-llama-serve.modal.run/health"
 ```
 
 ### `GET|POST /warmup`
@@ -31,7 +31,7 @@ curl -L "https://pradhankukiran--qwen36-27b-llama-serve.modal.run/health"
 Starts the Modal container if needed, waits for `llama-server`, and runs a one-token inference.
 
 ```bash
-curl -L -sS "https://pradhankukiran--qwen36-27b-llama-serve.modal.run/warmup" \
+curl -L -sS "https://YOUR-WORKSPACE--qwen36-27b-llama-serve.modal.run/warmup" \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -46,7 +46,7 @@ Expected response:
 OpenAI-compatible chat completions endpoint.
 
 ```bash
-curl -L -sS "https://pradhankukiran--qwen36-27b-llama-serve.modal.run/v1/chat/completions" \
+curl -L -sS "https://YOUR-WORKSPACE--qwen36-27b-llama-serve.modal.run/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   --data '{
@@ -81,7 +81,7 @@ If `LLAMA_API_KEY` is not set at deploy time, the API is public.
 from openai import OpenAI
 
 client = OpenAI(
-    base_url="https://pradhankukiran--qwen36-27b-llama-serve.modal.run/v1",
+    base_url="https://YOUR-WORKSPACE--qwen36-27b-llama-serve.modal.run/v1",
     api_key="YOUR_API_KEY",
 )
 
@@ -201,7 +201,7 @@ Create a local `.env` file, which is intentionally ignored by git:
 ```bash
 LLAMA_API_KEY=replace-with-a-long-random-token
 OPENAI_API_KEY=replace-with-a-long-random-token
-OPENAI_BASE_URL=https://pradhankukiran--qwen36-27b-llama-serve.modal.run
+OPENAI_BASE_URL=https://YOUR-WORKSPACE--qwen36-27b-llama-serve.modal.run
 OPENAI_MODEL=qwen3.6-27b
 APP_CTX_SIZE=262144
 APP_SPEC_DRAFT_N_MAX=3
