@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 import time
 from typing import Iterable
@@ -13,6 +14,7 @@ LLAMA_BASE_URL = os.environ.get("LLAMA_BASE_URL", "http://127.0.0.1:8001")
 LLAMA_API_KEY = os.environ.get("LLAMA_API_KEY")
 MODEL_ALIAS = os.environ.get("MODEL_ALIAS", "qwen3.6-27b")
 READY_TIMEOUT_SECONDS = float(os.environ.get("READY_TIMEOUT_SECONDS", "1800"))
+DEFAULT_ENABLE_THINKING = os.environ.get("DEFAULT_ENABLE_THINKING", "false").lower() == "true"
 
 app = FastAPI()
 
@@ -107,6 +109,15 @@ async def proxy_openai(path: str, request: Request):
     await _wait_for_llama()
 
     body = await request.body()
+    if request.method == "POST" and path == "chat/completions":
+        try:
+            payload = json.loads(body)
+            if "chat_template_kwargs" not in payload:
+                payload["chat_template_kwargs"] = {"enable_thinking": DEFAULT_ENABLE_THINKING}
+                body = json.dumps(payload).encode("utf-8")
+        except json.JSONDecodeError:
+            pass
+
     upstream_url = f"{LLAMA_BASE_URL}/v1/{path}"
     request_headers = _headers_without_hop_by_hop(request.headers.items())
     if LLAMA_API_KEY:

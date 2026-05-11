@@ -19,4 +19,5 @@ response = client.chat.completions.create(
     temperature=0.2,
 )
 
-print(response.choices[0].message.content)
+message = response.choices[0].message
+print(message.content or getattr(message, "reasoning_content", ""))

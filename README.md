@@ -14,6 +14,7 @@ This deploys a full-quality `Qwen3.6-27B-F16-mtp.gguf` model on a Modal H100 as 
 - GPU: `H100`
 - Autoscaling: scale to zero, max one container, keep warm for 5 minutes
 - MTP serving: single parallel sequence, because this llama.cpp MTP path requires `n_parallel=1`
+- Thinking mode: off by default at the proxy, so normal calls return `message.content`
 
 ## 1. Download The Model Into A Modal Volume
 
@@ -89,6 +90,16 @@ curl "${OPENAI_BASE_URL%/}/v1/chat/completions" \
     "messages": [{"role": "user", "content": "Hello"}],
     "max_tokens": 128
   }'
+```
+
+To explicitly enable Qwen3.6 thinking output for a request, include:
+
+```json
+{
+  "chat_template_kwargs": {
+    "enable_thinking": true
+  }
+}
 ```
 
 ## Useful Knobs
