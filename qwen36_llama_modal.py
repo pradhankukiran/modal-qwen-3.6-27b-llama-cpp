@@ -16,7 +16,7 @@ PUBLIC_PORT = 8000
 LLAMA_PORT = 8001
 EPHEMERAL_DISK_MB = 524288
 
-CTX_SIZE = os.environ.get("APP_CTX_SIZE", "8192")
+CTX_SIZE = os.environ.get("APP_CTX_SIZE", "262144")
 SPEC_DRAFT_N_MAX = os.environ.get("APP_SPEC_DRAFT_N_MAX", "3")
 
 app = modal.App(APP_NAME)

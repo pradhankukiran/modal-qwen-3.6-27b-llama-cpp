@@ -12,6 +12,7 @@ This deploys a full-quality `Qwen3.6-27B-F16-mtp.gguf` model on a Modal H100 as 
 - Warmup route: `/warmup`
 - API route: `/v1/chat/completions`
 - GPU: `H100`
+- Context window: 262,144 tokens
 - Autoscaling: scale to zero, max one container, keep warm for 5 minutes
 - MTP serving: single parallel sequence, because this llama.cpp MTP path requires `n_parallel=1`
 - Thinking mode: off by default at the proxy, so normal calls return `message.content`
@@ -107,12 +108,12 @@ To explicitly enable Qwen3.6 thinking output for a request, include:
 Set these before `modal deploy` if needed:
 
 ```bash
-export APP_CTX_SIZE=16384
+export APP_CTX_SIZE=262144
 export APP_SPEC_DRAFT_N_MAX=3
 export APP_SCALEDOWN_WINDOW_SECONDS=300
 ```
 
-Start with `APP_CTX_SIZE=8192`. Increase only if you need more context, because full F16 weights plus KV cache can push H100 VRAM hard.
+The model's native context is 262,144 tokens, and this deployment is configured to use that full window. If H100 memory pressure or startup time becomes a problem, lower `APP_CTX_SIZE` to `65536`, `32768`, or `16384`.
 
 ## Cost Controls
 
