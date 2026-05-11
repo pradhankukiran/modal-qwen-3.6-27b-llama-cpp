@@ -9,6 +9,7 @@ APP_NAME = "qwen36-27b-llama"
 MODEL_REPO = os.environ.get("APP_MODEL_REPO", "froggeric/Qwen3.6-27B-MTP-GGUF")
 MODEL_FILE = os.environ.get("APP_MODEL_FILE", "Qwen3.6-27B-F16-mtp.gguf")
 MODEL_ALIAS = os.environ.get("APP_MODEL_ALIAS", "qwen3.6-27b")
+LLAMA_CPP_COMMIT = "5d5f1b46e4f56885801c86363d4677a5f72f83af"
 MODEL_DIR = Path("/models")
 MODEL_PATH = MODEL_DIR / MODEL_FILE
 PUBLIC_PORT = 8000
@@ -53,7 +54,7 @@ image = (
             "git clone https://github.com/ggml-org/llama.cpp.git /opt/llama.cpp && "
             "cd /opt/llama.cpp && "
             "git fetch origin pull/22673/head:mtp-pr && "
-            "git checkout mtp-pr"
+            f"git checkout {LLAMA_CPP_COMMIT}"
         ),
         (
             "cmake -S /opt/llama.cpp -B /opt/llama.cpp/build -G Ninja "
@@ -101,7 +102,7 @@ def download_model():
     volumes={"/models": model_volume},
     min_containers=0,
     max_containers=1,
-    scaledown_window=int(os.environ.get("APP_SCALEDOWN_WINDOW_SECONDS", "600")),
+    scaledown_window=int(os.environ.get("APP_SCALEDOWN_WINDOW_SECONDS", "300")),
     timeout=60 * 60,
     startup_timeout=60 * 30,
     ephemeral_disk=90 * 1024,

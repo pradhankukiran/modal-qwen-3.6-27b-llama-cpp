@@ -12,7 +12,7 @@ This deploys a full-quality `Qwen3.6-27B-F16-mtp.gguf` model on a Modal H100 as 
 - Warmup route: `/warmup`
 - API route: `/v1/chat/completions`
 - GPU: `H100`
-- Autoscaling: scale to zero, max one container, keep warm for 10 minutes
+- Autoscaling: scale to zero, max one container, keep warm for 5 minutes
 
 ## 1. Download The Model Into A Modal Volume
 
@@ -97,7 +97,7 @@ Set these before `modal deploy` if needed:
 ```bash
 export APP_CTX_SIZE=16384
 export APP_SPEC_DRAFT_N_MAX=3
-export APP_SCALEDOWN_WINDOW_SECONDS=600
+export APP_SCALEDOWN_WINDOW_SECONDS=300
 ```
 
 Start with `APP_CTX_SIZE=8192`. Increase only if you need more context, because full F16 weights plus KV cache can push H100 VRAM hard.
@@ -108,6 +108,6 @@ This config intentionally uses:
 
 - `min_containers=0`: no always-on GPU
 - `max_containers=1`: no surprise horizontal scaling
-- `scaledown_window=600`: keeps the model warm for a short session
+- `scaledown_window=300`: keeps the model warm for a short session
 
 Do not send warmup requests continuously unless you want the H100 to stay running.
