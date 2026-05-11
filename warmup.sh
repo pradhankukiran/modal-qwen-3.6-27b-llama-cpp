@@ -5,7 +5,7 @@ set -euo pipefail
 : "${OPENAI_API_KEY:=local-test-key}"
 : "${OPENAI_MODEL:=qwen3.6-27b}"
 
-curl -sS "${OPENAI_BASE_URL%/}/warmup" \
+curl -L -sS "${OPENAI_BASE_URL%/}/warmup" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer ${OPENAI_API_KEY}" \
   --data "$(jq -n --arg model "$OPENAI_MODEL" '{model: $model}')"

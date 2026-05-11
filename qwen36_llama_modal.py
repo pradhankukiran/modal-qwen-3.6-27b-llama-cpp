@@ -131,6 +131,8 @@ def serve():
         CTX_SIZE,
         "-ngl",
         "999",
+        "--parallel",
+        "1",
         "--flash-attn",
         "on",
         "--spec-type",
