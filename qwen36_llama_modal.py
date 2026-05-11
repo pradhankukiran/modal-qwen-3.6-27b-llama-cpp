@@ -60,9 +60,11 @@ image = (
             "cmake -S /opt/llama.cpp -B /opt/llama.cpp/build -G Ninja "
             "-DGGML_CUDA=ON "
             "-DCMAKE_CUDA_ARCHITECTURES=90 "
+            "-DCMAKE_EXE_LINKER_FLAGS='-L/usr/local/cuda/lib64/stubs -Wl,-rpath-link,/usr/local/cuda/lib64/stubs' "
             "-DCMAKE_BUILD_TYPE=Release"
         ),
-        "cmake --build /opt/llama.cpp/build --target llama-server llama-cli",
+        "ln -sf /usr/local/cuda/lib64/stubs/libcuda.so /usr/local/cuda/lib64/stubs/libcuda.so.1",
+        "LIBRARY_PATH=/usr/local/cuda/lib64/stubs cmake --build /opt/llama.cpp/build --target llama-server",
     )
 )
 
