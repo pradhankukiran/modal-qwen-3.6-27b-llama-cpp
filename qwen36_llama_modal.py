@@ -67,6 +67,7 @@ image = (
         "ln -sf /usr/local/cuda/lib64/stubs/libcuda.so /usr/local/cuda/lib64/stubs/libcuda.so.1",
         "LIBRARY_PATH=/usr/local/cuda/lib64/stubs cmake --build /opt/llama.cpp/build --target llama-server",
     )
+    .add_local_file(Path(__file__).with_name("proxy_server.py"), "/root/proxy_server.py")
 )
 
 
@@ -162,6 +163,8 @@ def serve():
         "python",
         "-m",
         "uvicorn",
+        "--app-dir",
+        "/root",
         "proxy_server:app",
         "--host",
         "0.0.0.0",
